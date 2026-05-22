@@ -12,15 +12,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 from wordcloud import WordCloud
 
 # ==========================================
 # DOWNLOAD NLTK DATA
 # ==========================================
 
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('stopwords', quiet=True)
 
 # ==========================================
 # PAGE CONFIG
@@ -58,8 +56,8 @@ def preprocess_text(text):
     # remove punctuation
     text = re.sub(r'[^a-zA-Z\s]', '', text)
 
-    # tokenize
-    tokens = word_tokenize(text)
+    # simple tokenization
+    tokens = text.split()
 
     # remove stopwords
     tokens = [
@@ -67,7 +65,7 @@ def preprocess_text(text):
         if word not in stop_words
     ]
 
-    # join
+    # join cleaned words
     cleaned = " ".join(tokens)
 
     return cleaned
@@ -211,19 +209,21 @@ if st.button("Analyze Topic"):
 
         st.subheader("☁️ Word Cloud")
 
-        wordcloud = WordCloud(
-            width=800,
-            height=400,
-            background_color='white'
-        ).generate(cleaned_text)
+        if cleaned_text.strip() != "":
 
-        fig_wc, ax_wc = plt.subplots()
+            wordcloud = WordCloud(
+                width=800,
+                height=400,
+                background_color='white'
+            ).generate(cleaned_text)
 
-        ax_wc.imshow(wordcloud)
+            fig_wc, ax_wc = plt.subplots()
 
-        ax_wc.axis("off")
+            ax_wc.imshow(wordcloud)
 
-        st.pyplot(fig_wc)
+            ax_wc.axis("off")
+
+            st.pyplot(fig_wc)
 
         # ==========================================
         # TOPIC SIMILARITY
