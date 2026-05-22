@@ -1,7 +1,5 @@
 # ==========================================
-# STREAMLIT APP FOR NLP TOPIC MODELING
-# Python 3.14 Compatible
-# File Name: app.py
+# SIMPLE STREAMLIT NLP TOPIC PREDICTOR
 # ==========================================
 
 import streamlit as st
@@ -9,10 +7,8 @@ import joblib
 import re
 import nltk
 import numpy as np
-import matplotlib.pyplot as plt
 
 from nltk.corpus import stopwords
-from wordcloud import WordCloud
 
 # ==========================================
 # DOWNLOAD NLTK DATA
@@ -25,18 +21,17 @@ nltk.download('stopwords', quiet=True)
 # ==========================================
 
 st.set_page_config(
-    page_title="Philippine Government NLP Analyzer",
+    page_title="NLP Topic Predictor",
     page_icon="🇵🇭",
-    layout="wide"
+    layout="centered"
 )
 
 # ==========================================
-# LOAD MODELS
+# LOAD MODEL
 # ==========================================
 
 lda_model = joblib.load("lda_model.pkl")
 vectorizer = joblib.load("count_vectorizer.pkl")
-tfidf_vectorizer = joblib.load("tfidf_vectorizer.pkl")
 
 # ==========================================
 # STOPWORDS
@@ -45,7 +40,7 @@ tfidf_vectorizer = joblib.load("tfidf_vectorizer.pkl")
 stop_words = set(stopwords.words("english"))
 
 # ==========================================
-# TEXT PREPROCESSING FUNCTION
+# TEXT PREPROCESSING
 # ==========================================
 
 def preprocess_text(text):
@@ -56,7 +51,7 @@ def preprocess_text(text):
     # remove punctuation
     text = re.sub(r'[^a-zA-Z\s]', '', text)
 
-    # simple tokenization
+    # tokenize using split
     tokens = text.split()
 
     # remove stopwords
@@ -65,210 +60,60 @@ def preprocess_text(text):
         if word not in stop_words
     ]
 
-    # join cleaned words
+    # join cleaned text
     cleaned = " ".join(tokens)
 
     return cleaned
 
 # ==========================================
-# GET TOPIC WORDS
+# TOPIC LABELS
 # ==========================================
 
-def get_topic_words(model, feature_names, n_top_words=5):
-
-    topics = []
-
-    for topic_idx, topic in enumerate(model.components_):
-
-        top_features = [
-            feature_names[i]
-            for i in topic.argsort()[-n_top_words:]
-        ]
-
-        topics.append(top_features)
-
-    return topics
+topic_labels = {
+    0: "Government & Public Services",
+    1: "Politics & National Issues"
+}
 
 # ==========================================
-# APP TITLE
+# UI
 # ==========================================
 
-st.title("🇵🇭 Philippine Government NLP Topic Modeling")
-
-st.markdown("""
-This application analyzes Philippine government related news and predicts possible discussion topics using:
-
-- LDA Topic Modeling
-- NLP Text Processing
-- Word Frequency Analysis
-- Topic Similarity
-""")
-
-# ==========================================
-# USER INPUT
-# ==========================================
+st.title("🇵🇭 Philippine Government Topic Predictor")
 
 user_input = st.text_area(
-    "Enter Government Related News or Statement",
+    "Enter a statement or news article:",
     height=200
 )
 
 # ==========================================
-# ANALYZE BUTTON
+# PREDICT BUTTON
 # ==========================================
 
-if st.button("Analyze Topic"):
+if st.button("Predict Topic"):
 
     if user_input.strip() == "":
 
-        st.warning("Please enter text first.")
+        st.warning("Please enter text.")
 
     else:
 
-        # ==========================================
-        # PREPROCESS INPUT
-        # ==========================================
-
+        # preprocess
         cleaned_text = preprocess_text(user_input)
 
-        st.subheader("🧹 Cleaned Text")
-
-        st.write(cleaned_text)
-
-        # ==========================================
-        # VECTORIZE
-        # ==========================================
-
+        # vectorize
         text_vector = vectorizer.transform([cleaned_text])
 
-        # ==========================================
-        # TOPIC PREDICTION
-        # ==========================================
-
+        # predict
         topic_distribution = lda_model.transform(text_vector)
 
         predicted_topic = np.argmax(topic_distribution)
 
-        confidence = np.max(topic_distribution)
-
-        # ==========================================
-        # DISPLAY RESULTS
-        # ==========================================
-
-        st.subheader("📌 Predicted Topic")
-
-        st.success(f"Topic #{predicted_topic + 1}")
-
-        st.write(f"Confidence Score: {confidence:.4f}")
-
-        # ==========================================
-        # DISPLAY TOPIC WORDS
-        # ==========================================
-
-        st.subheader("🔍 Topic Keywords")
-
-        feature_names = vectorizer.get_feature_names_out()
-
-        topics = get_topic_words(
-            lda_model,
-            feature_names
+        predicted_label = topic_labels.get(
+            predicted_topic,
+            "Unknown Topic"
         )
 
-        for idx, topic_words in enumerate(topics):
-
-            st.write(
-                f"Topic {idx + 1}: {', '.join(topic_words)}"
-            )
-
-        # ==========================================
-        # TOPIC DISTRIBUTION CHART
-        # ==========================================
-
-        st.subheader("📊 Topic Distribution")
-
-        fig, ax = plt.subplots()
-
-        topic_labels = [
-            f"Topic {i+1}"
-            for i in range(len(topic_distribution[0]))
-        ]
-
-        ax.bar(
-            topic_labels,
-            topic_distribution[0]
+        # display only topic
+        st.success(
+            f"Predicted Topic: {predicted_label}"
         )
-
-        ax.set_ylabel("Probability")
-        ax.set_title("Topic Probability Distribution")
-
-        st.pyplot(fig)
-
-        # ==========================================
-        # WORD CLOUD
-        # ==========================================
-
-        st.subheader("☁️ Word Cloud")
-
-        if cleaned_text.strip() != "":
-
-            wordcloud = WordCloud(
-                width=800,
-                height=400,
-                background_color='white'
-            ).generate(cleaned_text)
-
-            fig_wc, ax_wc = plt.subplots()
-
-            ax_wc.imshow(wordcloud)
-
-            ax_wc.axis("off")
-
-            st.pyplot(fig_wc)
-
-        # ==========================================
-        # TOPIC SIMILARITY
-        # ==========================================
-
-        st.subheader("🧠 Topic Similarity Matrix")
-
-        similarity_matrix = np.dot(
-            topic_distribution,
-            topic_distribution.T
-        )
-
-        st.write(similarity_matrix)
-
-# ==========================================
-# SIDEBAR
-# ==========================================
-
-st.sidebar.title("📚 About Project")
-
-st.sidebar.info("""
-This NLP Topic Modeling project focuses on:
-
-- Philippine Government Issues
-- Inflation
-- Education
-- Healthcare
-- Transportation
-- Elections
-- Corruption
-- Foreign Policy
-
-Built using:
-- Python 3.14
-- Streamlit
-- Scikit-learn
-- NLTK
-""")
-
-# ==========================================
-# FOOTER
-# ==========================================
-
-st.markdown("---")
-
-st.caption(
-    "Developed using NLP Topic Modeling with LDA"
-)
